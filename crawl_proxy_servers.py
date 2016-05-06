@@ -15,7 +15,6 @@
 * <http://www.gnu.org/licenses/>.
 '''
 import requests
-import multiprocessing
 from bs4 import BeautifulSoup
 
 proxy_list = []
@@ -23,54 +22,50 @@ proxy_list = []
 test_url = 'http://ipservice.163.com/isFromMainland'
 crawl_url = 'http://cn-proxy.com'
 
+
 def crawl_proxy_servers():
-  page = requests.get(crawl_url)
-  if page.status_code == requests.codes.ok:
-    bsobj = BeautifulSoup(page.text, 'html.parser')
-    
-    try:
-      proxy_table = bsobj.find('div',
-          {'class':'table-container'}).find('table').find('tbody')
-      for tr in proxy_table.findAll('tr'):
-        proxy_info = tr.findAll('td')
-        ip = proxy_info[0]
-        port = proxy_info[1]
-        print(ip.get_text())
-        print(port.get_text())
-        proxy = ip.get_text()+':'+port.get_text()
-        if test_proxy_server(proxy):
-          proxy_list.append(proxy)
-    except AttributeError as e:
-      print('Tag not found')
-    
-  else:
-    print("wrong url")
+    page = requests.get(crawl_url)
+    if page.status_code == requests.codes.ok:
+        bsobj = BeautifulSoup(page.text, 'html.parser')
+        try:
+            proxy_table = bsobj.find('div', {'class': 'table-container'})
+            proxy_body = proxy_table.find('table').find('tbody')
+            for tr in proxy_body.findAll('tr'):
+                proxy_info = tr.findAll('td')
+                ip = proxy_info[0]
+                port = proxy_info[1]
+                print(ip.get_text())
+                print(port.get_text())
+                proxy = ip.get_text()+':'+port.get_text()
+                if test_proxy_server(proxy):
+                    proxy_list.append(proxy)
+        except AttributeError as e:
+            print('Tag not found-->'+str(e))
+    else:
+        print("wrong url")
 
 
 def test_proxy_server(proxy):
-  proxies = {
-        'http':proxy
-      }
+    proxies = {'http': proxy}
 
-  try:
-    response = requests.get(test_url, proxies=proxies, timeout=10)
-    if response.status_code == requests.codes.ok:
-      print(response.text)
-      if response.text == 'true':
-        return True
-      else:
+    try:
+        response = requests.get(test_url, proxies=proxies, timeout=10)
+        if response.status_code == requests.codes.ok:
+            print(response.text)
+            if response.text == 'true':
+                return True
+            else:
+                return False
+        else:
+            print('[163 test]: return error code')
+            return False
+    except (requests.exceptions.Timeout,
+            requests.exceptions.RequestException,
+            requests.exceptions.ConnectionError) as e:
+        print('[163 test]: some bad happened-->'+str(e))
         return False
-    else:
-      print('[163 test]: return error code')
-      return False
-  except (requests.exceptions.Timeout, requests.exceptions.RequestException,
-      requests.exceptions.ConnectionError) as e:
-    print('[163 test]: some bad happened')
-    return False
 
 if __name__ == '__main__':
-  crawl_proxy_servers()
-  print("final list:")
-  print(proxy_list)
-
-
+    crawl_proxy_servers()
+    print("final list:")
+    print(proxy_list)
